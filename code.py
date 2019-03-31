@@ -1,2 +1,3 @@
-a = {'username':123}
-print 'username' in a
+a = [1, 22, 333]
+
+print a.index(max(a))

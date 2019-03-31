@@ -50,22 +50,35 @@
             alert("请输入用户名和密码！");
             return false;
         }
-        var oAjax = new XMLHttpRequest();
+        var ajax = new XMLHttpRequest();
 
-        oAjax.open('POST', 'http://123.206.66.164:80/login', true);
-        oAjax.setRequestHeader("Content-Type", "application/json");
+        ajax.open('POST', 'http://123.206.66.164:80/login', true);
+        ajax.setRequestHeader("Content-Type", "application/json");
 
         data = JSON.stringify({
             "user_name": user_name,
             "password": password
         });
-        oAjax.send(data);
+        ajax.send(data);
 
-        oAjax.onreadystatechange = function () {
-            if (oAjax.readyState ==4 && oAjax.status == 200) {
-                var resp = JSON.parse(oAjax.responseText);
+        ajax.onreadystatechange = function () {
+            if (ajax.readyState ==4 && ajax.status == 200) {
+                var resp = JSON.parse(ajax.responseText);
                 if (resp.success){
-                    window.location.href = 'http://123.206.66.164:80/home?user_name=' + user_name;
+                    var url = 'http://123.206.66.164:80/home?user_name=' + user_name;
+                    url = url + '&poi_visited_num=' + resp.poi_visited_num;
+                    url = url + '&distance_sense=' + resp.distance_sense;
+                    url = url + '&beauty_like=' + resp.beauty_like;
+                    url = url + '&leisure_like=' + resp.leisure_like;
+                    url = url + '&romance_like=' + resp.romance_like;
+                    url = url + '&excitement_like=' + resp.excitement_like;
+                    url = url + '&humanity_like=' + resp.humanity_like;
+                    url = url + '&type0_like=' + resp.type0_like;
+                    url = url + '&type1_like=' + resp.type1_like;
+                    url = url + '&type2_like=' + resp.type2_like;
+                    url = url + '&type3_like=' + resp.type3_like;
+                    url = url + '&type4_like=' + resp.type4_like;
+                    window.location.href = url;
                 }
                 else {
                     alert(resp.msg)

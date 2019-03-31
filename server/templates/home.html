@@ -1,10 +1,393 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
+    <title>推荐首页</title>
+    <link rel="stylesheet" href="https://cache.amap.com/lbs/static/main1119.css"/>
+    <link rel="stylesheet" href="https://a.amap.com/jsapi_demos/static/demo-center/css/demo-center.css"/>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.13&key=5a374ac41047f7a3e98d2ab797d4a748"></script>
+    <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+    <style>
+        html, body {
+            height: 100%;
+        }
+
+        #container {
+            height: 100%;
+        }
+
+        .input-card {
+            width: 200px;
+            vertical-align: middle;
+            left: 0;
+            bottom: auto;
+        }
+
+        .input-item {
+            position: relative;
+            display: -ms-flexbox;
+            display: flex;
+            -ms-flex-wrap: wrap;
+            flex-wrap: wrap;
+            -ms-flex-align: center;
+            align-items: center;
+            width: 100%;
+            height: auto;
+        }
+
+        .user_info {
+            padding: .75rem 1.25rem;
+            margin-bottom: 1rem;
+            border-radius: .25rem;
+            position: fixed;
+            top: 0;
+            background-color: white;
+            width: 325px;
+            border-width: 0;
+            right: 0;
+            box-shadow: 0 2px 6px 0 rgba(114, 124, 245, .5);
+        }
+
+        .submit-button {
+            font-size: 12px;
+            width: 150px;
+            height: 30px;
+            border: 3px solid #e7e7e7;
+            background-color: white;
+            border-radius: 10px;
+        }
+
+        .submit-button:hover {
+            background-color: #ededed;
+        }
+
+        table {
+            font-family: verdana, arial, sans-serif;
+            font-size: 10px;
+            color: #333333;
+            border-color: #666666;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        th {
+            border-width: 0;
+            padding: 8px;
+            border-style: solid;
+            border-color: #333333;
+            background-color: #ededed;
+            word-break: break-word;
+        }
+
+        td {
+            border-width: 0;
+            padding: 8px;
+            border-style: solid;
+            border-color: #333333;
+            background-color: #ffffff;
+            word-break: break-word;
+        }
+    </style>
 </head>
 <body>
-Welcome {{user_name}}!
+<div id="container"></div>
+
+<div class='input-card'>
+    <div class="input-item">
+        <label><font size="5">筛选器</font></label>
+    </div>
+    <hr>
+    <br>
+    景点数目：
+    <div class="input-item">
+        <script type="text/javascript">
+            function poi_num_change() {
+                var poi_range = document.getElementById("poi_range");
+                var poi_num = document.getElementById("poi_num");
+                poi_num.innerText = poi_range.value
+            }
+
+            function send_recommend() {
+                var poi_range = document.getElementById("poi_range").value;
+                var travel_mode = document.getElementById("travel_mode").value;
+                var ajax = new XMLHttpRequest();
+
+                ajax.open('POST', 'http://123.206.66.164:80/recommend', true);
+                ajax.setRequestHeader("Content-Type", "application/json");
+                data = JSON.stringify({
+                    "poi_range": poi_range,
+                    "travel_mode": travel_mode,
+                    "position": window.position,
+                    "user_info": {{ user_info|tojson }},
+                });
+                ajax.send(data);
+                ajax.onreadystatechange = function () {
+                    if (ajax.readyState == 4 && ajax.status == 200) {
+                        console.log('推荐成功')
+                    }
+
+                }
+            }
+        </script>
+        <input id='poi_range' type="range" min="1" max="7" onchange="poi_num_change()"/>
+        &nbsp;&nbsp;&nbsp;
+        <p id="poi_num">4</p>
+
+    </div>
+    <br>
+    出行方式：
+    <div class="input-item">
+        <select class="select" id="travel_mode">
+            <option value="walking">步行</option>
+            <option value="riding">骑行</option>
+            <option value="driving">驾车</option>
+        </select>
+    </div>
+    <br>
+    <div class="input-item">
+        <button class="submit-button" onclick="send_recommend()">提交</button>
+    </div>
+    <br>
+</div>
+
+<div id="user_info" class="user_info">
+    <div class="input-item">
+        <label><font size="5">{{ user_info.user_name }}，你好！</font></label>
+    </div>
+    <hr>
+
+    <div class="input-item">
+        你已经去过：<label><font size="4" color="red">{{ user_info.poi_visited_num }}&nbsp;</font></label>个景点
+    </div>
+    <div class="input-item">
+        <table>
+            <tr>
+                <th>✔️</th>
+                <th>排名</th>
+                <th>属性评分</th>
+                <th>总行程及评分</th>
+            </tr>
+            <tr>
+                <td><input type="checkbox" id="route_check"></input></td>
+                <td>1</td>
+                <td>23.6/23.6/23.6/23.5/20.5</td>
+                <td>4.5km/87</td>
+            </tr>
+            <tr>
+                <td><input type="checkbox" id="route_check2"></input></td>
+                <td>2</td>
+                <td>23.6/23.6/23.6/23.5/20.5</td>
+                <td>4.8km/83</td>
+            </tr>
+        </table>
+    </div>
+    <div id="radar_chart">
+        <script type="text/javascript">
+            var mW = 300;
+            var mH = 300;
+            var mData = [
+                ['风景优美', 77],
+                ['休闲娱乐', 72],
+                ['浪漫惬意', 46],
+                ['惊险刺激', 50],
+                ['人文和谐', 80],
+                ['景点类型', 60],
+            ];
+            var mCount = mData.length; //边数
+            var mCenter = mW / 2; //中心点
+            var mRadius = mCenter - 50; //半径(减去的值用于给绘制的文本留空间)
+            var mAngle = Math.PI * 2 / mCount; //角度
+            var mCtx = null;
+            var mColorPolygon = '#B8B8B8'; //多边形颜色
+            var mColorLines = '#B8B8B8'; //顶点连线颜色
+            var mColorText = '#000000';
+
+            //初始化
+            (function () {
+                var canvas = document.createElement('canvas');
+                document.getElementById('user_info').appendChild(canvas);
+                canvas.height = mH;
+                canvas.width = mW;
+                mCtx = canvas.getContext('2d');
+
+                drawPolygon(mCtx);
+                drawLines(mCtx);
+                drawText(mCtx);
+                drawRegion(mCtx);
+                drawCircle(mCtx);
+            })();
+
+            // 绘制多边形边
+            function drawPolygon(ctx) {
+                ctx.save();
+
+                ctx.strokeStyle = mColorPolygon;
+                var r = mRadius / mCount; //单位半径
+                //画6个圈
+                for (var i = 0; i < mCount; i++) {
+                    ctx.beginPath();
+                    var currR = r * (i + 1); //当前半径
+                    //画5条边
+                    for (var j = 0; j < mCount; j++) {
+                        var x = mCenter + currR * Math.cos(mAngle * j);
+                        var y = mCenter + currR * Math.sin(mAngle * j);
+                        ctx.lineTo(x, y);
+                    }
+                    //回到路径起始点 没有moveTo 则是lineTo的点
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            //顶点连线
+            function drawLines(ctx) {
+                ctx.save();
+
+                ctx.beginPath();
+                ctx.strokeStyle = mColorLines;
+
+                for (var i = 0; i < mCount; i++) {
+                    var x = mCenter + mRadius * Math.cos(mAngle * i);
+                    var y = mCenter + mRadius * Math.sin(mAngle * i);
+
+                    ctx.moveTo(mCenter, mCenter);
+                    ctx.lineTo(x, y);
+                }
+
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            //绘制文本
+            function drawText(ctx) {
+                ctx.save();
+
+                var fontSize = mCenter / 12;
+                ctx.font = fontSize + 'px Microsoft Yahei';
+                ctx.fillStyle = mColorText;
+
+                for (var i = 0; i < mCount; i++) {
+                    var x = mCenter + mRadius * Math.cos(mAngle * i);
+                    var y = mCenter + mRadius * Math.sin(mAngle * i);
+
+
+                    // fillText的x y是文字的左下角
+                    if (mAngle * i >= 0 && mAngle * i <= Math.PI / 2) {
+                        ctx.fillText(mData[i][0], x, y + fontSize);
+                    } else if (mAngle * i > Math.PI / 2 && mAngle * i <= Math.PI) {
+                        ctx.fillText(mData[i][0], x - ctx.measureText(mData[i][0]).width, y + fontSize);
+                    } else if (mAngle * i > Math.PI && mAngle * i <= Math.PI * 3 / 2) {
+                        ctx.fillText(mData[i][0], x - ctx.measureText(mData[i][0]).width, y);
+                    } else {
+                        ctx.fillText(mData[i][0], x, y);
+                    }
+
+                }
+
+                ctx.restore();
+            }
+
+            //绘制数据区域
+            function drawRegion(ctx) {
+                ctx.save();
+
+                ctx.beginPath();
+                for (var i = 0; i < mCount; i++) {
+                    var x = mCenter + mRadius * Math.cos(mAngle * i) * mData[i][1] / 100;
+                    var y = mCenter + mRadius * Math.sin(mAngle * i) * mData[i][1] / 100;
+
+                    ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            //画点
+            function drawCircle(ctx) {
+                ctx.save();
+
+                var r = mCenter / 40;
+                for (var i = 0; i < mCount; i++) {
+                    var x = mCenter + mRadius * Math.cos(mAngle * i) * mData[i][1] / 100;
+                    var y = mCenter + mRadius * Math.sin(mAngle * i) * mData[i][1] / 100;
+
+                    ctx.beginPath();
+                    ctx.arc(x, y, r, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+        </script>
+    </div>
+
+
+</div>
+
+<script type="text/javascript">
+    //初始化地图对象，加载地图
+
+    var map = new AMap.Map("container", {resizeEnable: true, showLabel: false});
+
+    AMap.plugin('AMap.Geolocation', function () {
+        var geolocation = new AMap.Geolocation({
+            enableHighAccuracy: true,//是否使用高精度定位，默认:true
+            timeout: 10000,          //超过10秒后停止定位，默认：5s
+            buttonPosition: 'RB',    //定位按钮的停靠位置
+            buttonOffset: new AMap.Pixel(10, 20),//定位按钮与设置的停靠位置的偏移量，默认：Pixel(10, 20)
+            zoomToAccuracy: true,   //定位成功后是否自动调整地图视野到定位点
+            showCircle: true,
+            panToLocation: true,
+
+        });
+        map.addControl(geolocation);
+        geolocation.getCurrentPosition(function (status, result) {
+            if (status == 'complete') {
+                window.position = result.position;
+                console.log(result.position.toString())
+            } else {
+                alert('定位失败');
+            }
+        });
+    });
+    var pois = JSON.parse({{ pois|tojson }});
+    var lnglats = [
+    ];
+    for ( i = 0; i < pois.length; i++) {
+        poi_lnglat = [parseFloat(pois[i]['longitude']), parseFloat(pois[i]['latitude'])];
+        lnglats.push(poi_lnglat);
+    }
+
+    var infoWindow = new AMap.InfoWindow({offset: new AMap.Pixel(8, -32)});
+    for (i = 0, marker; i < lnglats.length; i++) {
+        var marker = new AMap.Marker({
+            position: lnglats[i],
+            icon: '../static/icon-point.png',
+            map: map
+        });
+        var info = [];
+        info.push("<img height=\"100\" width=\"100\" style=\"float:left;\" src=" + pois[i]['image'] + ">".replace("/", ""));
+        info.push("<p><a target='_blank' href=" + pois[i]['url'] + "><h3>" + pois[i]['name'] + "</h3></a></p>");
+        info.push("<p>" + pois[i]['comment'] + "</p></div>");
+        marker.content = info.join("");
+        marker.on('click', markerClick);
+    }
+
+    function markerClick(e) {
+        infoWindow.setContent(e.target.content);
+        infoWindow.open(map, e.target.getPosition());
+    }
+    map.setFitView();
+
+</script>
 </body>
 </html>

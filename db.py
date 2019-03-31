@@ -39,6 +39,17 @@ class POIUser(Base):
     user_name = Column(String(64))
     password = Column(String(64))
     poi_visited_num = Column(Integer())
+    distance_sense = Column(Integer())
+    beauty_like = Column(Integer())
+    leisure_like = Column(Integer())
+    romance_like = Column(Integer())
+    excitement_like = Column(Integer())
+    humanity_like = Column(Integer())
+    type0_like = Column(Integer())
+    type1_like = Column(Integer())
+    type2_like = Column(Integer())
+    type3_like = Column(Integer())
+    type4_like = Column(Integer())
 
     def __str__(self):
         return 'user_name:{}, password:{}'.format(self.user_name, self.password)
@@ -49,12 +60,7 @@ def get_db_session():
     DBSession = sessionmaker(bind=engine)
     return DBSession()
 
-
 # db_session = get_db_session()
 # records = db_session.query(POIInfo).all()
-# for poi in records:
-#     image_url = poi.poi_image.split('?')[0]
-#     poi.poi_image = image_url
-#     print image_url
-# db_session.commit()
+# print records[2]
 # db_session.close()
