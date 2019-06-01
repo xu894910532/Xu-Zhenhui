@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+    <title>冷启动</title>
+    <style>
+    ul {
+       margin-left: 200px;
+    }
+    li {
+        width: 200px;
+        height: 100px;
+        border: 1px groove #dddddd;
+        list-style:none;
+        border-radius: 10px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        padding-left: 10px;
+        color: black;
+    }
+
+    body {
+        background-image: url('../static/background.jpeg');
+        background-size: cover;
+    }
+
+    button {
+        background-color: white;
+        border: 2px solid #e7e7e7;
+        border-radius: 10px;
+        color: black;
+        padding: 16px 32px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 20px;
+        margin: 4px 2px;
+        -webkit-transition-duration: 0.4s; /* Safari */
+        transition-duration: 0.4s;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background-color: #e7e7e7;
+    }
+    </style>
+</head>
+<body>
+<h1>你好，{{ user_info.user_name }}！</h1>
+<div style="float: left;width: 49%;">
+<h3 align="center">请将以下五个景点按喜好程度排序</h3>
+<ul id="container1">
+</ul>
+</div>
+
+<div style="float: left;width: 49%;">
+<h3 align="center">请将以下五个景点按喜好程度排序</h3>
+<ul id="container2">
+</ul>
+</div>
+
+<div align="center" style="clear:both;font-size:24px">
+    <hr>
+    <br>
+    请输入你对景点距离的敏感/在意程度(1-100)：<input id="distance_sense" type="number" min="1" oninput="if(value>100)value=100" style="font-size: 20px" value="50"/>
+</div>
+<br>
+<div align="center" style="clear:both;font-size:24px">
+    <hr>
+    对景点特色的在意程度（总分一百，请分配给以下特色）：<br>
+    <p>风景优美：<input id="beauty_like" type="number" min="10" value="20" onblur="if(value>60)value=60;else if(value<10)value=10" style="font-size: 20px"/></p>
+    <p>休闲娱乐：<input id="leisure_like" type="number" min="10" value="20" onblur="if(value>60)value=60;else if(value<10)value=10" style="font-size: 20px"/></p>
+    <p>浪漫惬意：<input id="romance_like" type="number" min="10" value="20" onblur="if(value>60)value=60;else if(value<10)value=10" style="font-size: 20px"/></p>
+    <p>惊险刺激：<input id="excitement_like" type="number" min="10" value="20" onblur="if(value>60)value=60;else if(value<10)value=10" style="font-size: 20px"/></p>
+    <p>人文和谐：<input id="humanity_like" type="number" min="10" value="20" onblur="if(value>60)value=60;else if(value<10)value=10" style="font-size: 20px"/></p>
+</div>
+<div align="center" style="clear:both;font-size:24px">
+    <button type="button" onclick="submit_user_info()">提交</button>
+</div>
+<br><br>
+<script type="text/javascript">
+        var pois = JSON.parse({{ pois | tojson }});
+        console.log(pois)
+        var node1 = document.querySelector("#container1");
+        var node2 = document.querySelector("#container2");
+
+        for (var i = 0; i < pois.length; i++) {
+            var li = document.createElement('li');
+            li.draggable = true;
+            li.id = pois[i]['id'].toString();
+            li.innerHTML = '<img src="' + pois[i]['image'] + '" height="100" width="100"/>' + pois[i]['name'];
+            if (i < pois.length / 2) {
+                node1.appendChild(li)
+            }
+            else {
+                node2.appendChild(li)
+            }
+        }
+        drag_listener(node1);
+        drag_listener(node2);
+
+
+        function drag_listener(node) {
+            var draging = null;
+            //使用事件委托，将li的事件委托给ul
+            node.ondragstart = function (event) {
+                event.dataTransfer.setData("self", event.target);
+                draging = event.target;
+            };
+            node.ondragover = function (event) {
+
+                event.preventDefault();
+                var target = event.target;
+                //因为dragover会发生在ul上，所以要判断是不是li
+                if (target.nodeName === "LI" && target !== draging && draging.nodeName !== "IMG") {
+                    if (_index(draging) < _index(target)) {
+                        target.parentNode.insertBefore(draging, target.nextSibling);
+                    } else {
+                        target.parentNode.insertBefore(draging, target);
+                    }
+                }
+            }
+        }
+
+        //获取元素在父元素中的index
+        function _index(el) {
+            var index = 0;
+            if (!el || !el.parentNode) {
+                return -1;
+            }
+            while (el && (el = el.previousElementSibling)) {
+                index++;
+            }
+            return index;
+        }
+        function submit_user_info() {
+            var beauty_like = parseInt(document.getElementById('beauty_like').value);
+            var leisure_like = parseInt(document.getElementById('leisure_like').value);
+            var romance_like = parseInt(document.getElementById('romance_like').value);
+            var excitement_like = parseInt(document.getElementById('excitement_like').value);
+            var humanity_like = parseInt(document.getElementById('humanity_like').value);
+            if (beauty_like + leisure_like + romance_like + excitement_like + humanity_like !== 100) {
+                alert('景点特色的在意程度得分和不是100！');
+                return
+            }
+            var disctance_sense = parseInt(document.getElementById('distance_sense').value);
+            var user_info = {{ user_info|tojson }}
+            var user_name = user_info['user_name'];
+            var password = user_info['password'];
+            var container1 = [];
+            var container2 = [];
+            for (var i=0;i < node1.children.length;i++){
+
+                container1.push(node1.children[i].id);
+            }
+
+            for (i=0;i < node2.children.length;i++){
+
+                container2.push(node2.children[i].id);
+            }
+            var ajax = new XMLHttpRequest();
+
+            ajax.open('POST', 'http://123.206.66.164:80/cold_start', true);
+            ajax.setRequestHeader("Content-Type", "application/json");
+            data = JSON.stringify({
+                "container1": container1,
+                "container2": container2,
+                "distance_sense":disctance_sense,
+                "beauty_like": beauty_like,
+                "leisure_like": leisure_like,
+                "romance_like": romance_like,
+                "excitement_like": excitement_like,
+                "humanity_like": humanity_like,
+                "user_name": user_name,
+                "password": password
+            });
+            ajax.send(data);
+            ajax.onreadystatechange = function () {
+                if (ajax.readyState == 4 && ajax.status == 200) {
+                    var resp = JSON.parse(ajax.responseText);
+                    if (resp.success) {
+                        alert('注册成功')
+                        window.location.href = 'http://123.206.66.164:80';
+                    }
+                }
+            }
+        }
+</script>
+</body>

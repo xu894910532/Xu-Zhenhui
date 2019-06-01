@@ -15,7 +15,7 @@ headers = {
 while page_num < 16:
     page_num += 1
 
-    res = requests.get('http://www.ilvping.com/view/index/index/ac%3D104104101&p={}.html'.format(page_num),
+    res = requests.get('http://www.ilvping.com/view/index/index/ac%3D101101101&p={}.html'.format(page_num),
                        headers=headers)
     res.encoding = 'utf-8'
 
@@ -39,4 +39,4 @@ while page_num < 16:
                 poi_feature = score.text.encode('utf-8').strip()
             else:
                 continue
-        print poi_title, poi_star_score, poi_beautiful, poi_humanity, poi_entertainment, poi_romance, poi_exciting, poi_feature
+        # print poi_title, poi_star_score, poi_beautiful, poi_humanity, poi_entertainment, poi_romance, poi_exciting, poi_feature

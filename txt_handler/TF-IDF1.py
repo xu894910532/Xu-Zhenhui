@@ -16,7 +16,7 @@ for index in range(375):
 vectorizer = CountVectorizer()
 transformer = TfidfTransformer()
 
-weight = vectorizer.fit_transform(corpus).toarray()
+weight = transformer.fit_transform(vectorizer.fit_transform(corpus))
 # print ' '.join(vectorizer.get_feature_names()).encode('utf-8')
 # for i in weight[0:10]:
 #     print list(i)
@@ -63,7 +63,7 @@ for index in range(len(reduced)):
     elif int(labels[index]) == 4:
         plt.scatter(reduced[index][0], reduced[index][1], color='black')
         cluster4_pois.append(index + 1)
-# plt.show()
+plt.show()
 plt.close()
 print '\n----------'
 for index in cluster0_pois:

@@ -1,10 +1,8 @@
 # coding:utf-8
-import csv
-import json
 import copy
 import db
 import difflib
-from poi_scores import poi_scores
+from crawler.poi_scores import poi_scores
 
 
 def get_equal_rate(str1, str2):

@@ -7,8 +7,10 @@
     <title>推荐首页</title>
     <link rel="stylesheet" href="https://cache.amap.com/lbs/static/main1119.css"/>
     <link rel="stylesheet" href="https://a.amap.com/jsapi_demos/static/demo-center/css/demo-center.css"/>
+    <script src="https://a.amap.com/jsapi_demos/static/demo-center/js/demoutils.js"></script>
     <script type="text/javascript" src="https://webapi.amap.com/maps?v=1.4.13&key=5a374ac41047f7a3e98d2ab797d4a748"></script>
     <script type="text/javascript" src="../static/js/jquery.min.js"></script>
+    <script src="https://webapi.amap.com/maps?v=1.4.13&key=5a374ac41047f7a3e98d2ab797d4a748&plugin=AMap.Walking,AMap.MouseTool"></script>
     <style>
         html, body {
             height: 100%;
@@ -89,11 +91,23 @@
             background-color: #ffffff;
             word-break: break-word;
         }
+        .context_menu{
+            position: relative;
+            min-width: 12rem;
+            padding: 0;
+        }
+        .context_menu p{
+            cursor: pointer;
+            padding: 0.25rem 1.25rem;
+        }
+
+        .context_menu p:hover{
+            background: #ccc;
+        }
     </style>
 </head>
 <body>
 <div id="container"></div>
-
 <div class='input-card'>
     <div class="input-item">
         <label><font size="5">筛选器</font></label>
@@ -103,13 +117,17 @@
     景点数目：
     <div class="input-item">
         <script type="text/javascript">
+            var poi_longitude;
+            var poi_latitude;
             function poi_num_change() {
                 var poi_range = document.getElementById("poi_range");
                 var poi_num = document.getElementById("poi_num");
                 poi_num.innerText = poi_range.value
             }
-
             function send_recommend() {
+                var button = document.getElementById("recommend-button");
+                button.disabled = true;
+                button.innerText = '计算中...';
                 var poi_range = document.getElementById("poi_range").value;
                 var travel_mode = document.getElementById("travel_mode").value;
                 var ajax = new XMLHttpRequest();
@@ -125,10 +143,295 @@
                 ajax.send(data);
                 ajax.onreadystatechange = function () {
                     if (ajax.readyState == 4 && ajax.status == 200) {
-                        console.log('推荐成功')
+
+                        var resp = JSON.parse(ajax.responseText);
+                        var msg = resp.msg;
+                        var route = JSON.parse(resp.route);
+                        var score = JSON.parse(resp.score);
+                        console.log(score)
+
+                        ///////////////////////////////////
+                        // 绘制表格和雷达图
+                        var table = document.getElementById('score_table');
+                        var tr = document.createElement("tr");
+                        var td1 = document.createElement("td");
+                        td1.innerHTML = '<td><input type="checkbox" id="route_check"/></td>';
+                        var td2 = document.createElement("td");
+                        if(window.route_rank){
+                            td2.innerText = window.route_rank.toString();
+                            window.route_rank += 1;
+                        }
+                        else{
+                            td2.innerText = '1';
+                            window.route_rank = 2;
+                        }
+                        var td3 = document.createElement("td");
+                        td3.innerText += score.beauty_score + '/';
+                        td3.innerText += score.excitement_score + '/';
+                        td3.innerText += score.humanity_score + '/';
+                        td3.innerText += score.leisure_score + '/';
+                        td3.innerText += score.romance_score + '/';
+                        var td4 = document.createElement("td");
+                        td4.innerText = score.distance +' km/' + (score.distance_sense/score.distance).toFixed(3);
+                        tr.appendChild(td1);
+                        tr.appendChild(td2);
+                        tr.appendChild(td3);
+                        tr.appendChild(td4);
+                        // var old_tr = table.getElementsByTagName("tr")[1];
+                        // if (old_tr){
+                        //     table.removeChild(old_tr)
+                        // }
+                        table.appendChild(tr);
+                        var mW = 300;
+                        var mH = 300;
+                        var mData = [
+                            ['风景优美', score.beauty_score],
+                            ['惊险刺激', score.excitement_score],
+                            ['人文和谐', score.humanity_score],
+                            ['休闲娱乐', score.leisure_score],
+                            ['浪漫惬意', score.romance_score ],
+                            //['景点类型', 60],
+                        ];
+                        var mCount = mData.length; //边数
+                        var mCenter = mW / 2; //中心点
+                        var mRadius = mCenter - 50; //半径(减去的值用于给绘制的文本留空间)
+                        var mAngle = Math.PI * 2 / mCount; //角度
+                        var mCtx = null;
+                        var mColorPolygon = '#B8B8B8'; //多边形颜色
+                        var mColorLines = '#B8B8B8'; //顶点连线颜色
+                        var mColorText = '#000000';
+                        var canvas = document.createElement('canvas');
+                        window.canvas = canvas;
+                        document.getElementById('user_info').appendChild(canvas);
+                        canvas.height = mH;
+                        canvas.width = mW;
+                        mCtx = canvas.getContext('2d');
+
+                        drawPolygon(mCtx);
+                        drawLines(mCtx);
+                        drawText(mCtx);
+                        drawRegion(mCtx);
+                        drawCircle(mCtx);
+
+                        // 绘制多边形边
+                        function drawPolygon(ctx) {
+                            ctx.save();
+
+                            ctx.strokeStyle = mColorPolygon;
+                            var r = mRadius / mCount; //单位半径
+                            //画6个圈
+                            for (var i = 0; i < mCount; i++) {
+                                ctx.beginPath();
+                                var currR = r * (i + 1); //当前半径
+                                //画5条边
+                                for (var j = 0; j < mCount; j++) {
+                                    var x = mCenter + currR * Math.cos(mAngle * j);
+                                    var y = mCenter + currR * Math.sin(mAngle * j);
+                                    ctx.lineTo(x, y);
+                                }
+                                //回到路径起始点 没有moveTo 则是lineTo的点
+                                ctx.closePath();
+                                ctx.stroke();
+                            }
+
+                            ctx.restore();
+                        }
+
+                        //顶点连线
+                        function drawLines(ctx) {
+                            ctx.save();
+
+                            ctx.beginPath();
+                            ctx.strokeStyle = mColorLines;
+
+                            for (var i = 0; i < mCount; i++) {
+                                var x = mCenter + mRadius * Math.cos(mAngle * i);
+                                var y = mCenter + mRadius * Math.sin(mAngle * i);
+
+                                ctx.moveTo(mCenter, mCenter);
+                                ctx.lineTo(x, y);
+                            }
+
+                            ctx.stroke();
+
+                            ctx.restore();
+                        }
+
+                        //绘制文本
+                        function drawText(ctx) {
+                            ctx.save();
+
+                            var fontSize = mCenter / 12;
+                            ctx.font = fontSize + 'px Microsoft Yahei';
+                            ctx.fillStyle = mColorText;
+
+                            for (var i = 0; i < mCount; i++) {
+                                var x = mCenter + mRadius * Math.cos(mAngle * i);
+                                var y = mCenter + mRadius * Math.sin(mAngle * i);
+
+
+                                // fillText的x y是文字的左下角
+                                if (mAngle * i >= 0 && mAngle * i <= Math.PI / 2) {
+                                    ctx.fillText(mData[i][0], x, y + fontSize);
+                                } else if (mAngle * i > Math.PI / 2 && mAngle * i <= Math.PI) {
+                                    ctx.fillText(mData[i][0], x - ctx.measureText(mData[i][0]).width, y + fontSize);
+                                } else if (mAngle * i > Math.PI && mAngle * i <= Math.PI * 3 / 2) {
+                                    ctx.fillText(mData[i][0], x - ctx.measureText(mData[i][0]).width, y);
+                                } else {
+                                    ctx.fillText(mData[i][0], x, y);
+                                }
+
+                            }
+
+                            ctx.restore();
+                        }
+
+                        //绘制数据区域
+                        function drawRegion(ctx) {
+                            ctx.save();
+
+                            ctx.beginPath();
+                            for (var i = 0; i < mCount; i++) {
+                                var x = mCenter + mRadius * Math.cos(mAngle * i) * mData[i][1] / 12;
+                                var y = mCenter + mRadius * Math.sin(mAngle * i) * mData[i][1] / 12;
+
+                                ctx.lineTo(x, y);
+                            }
+                            ctx.closePath();
+                            ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+                            ctx.fill();
+
+                            ctx.restore();
+                        }
+
+                        //画点
+                        function drawCircle(ctx) {
+                            ctx.save();
+
+                            var r = mCenter / 40;
+                            for (var i = 0; i < mCount; i++) {
+                                var x = mCenter + mRadius * Math.cos(mAngle * i) * mData[i][1] / 12;
+                                var y = mCenter + mRadius * Math.sin(mAngle * i) * mData[i][1] / 12;
+
+                                ctx.beginPath();
+                                ctx.arc(x, y, r, 0, Math.PI * 2);
+                                ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+                                ctx.fill();
+                            }
+
+                            ctx.restore();
+                        }
+
+                        /////////////////////////////////
+
+                        button.disabled = false;
+                        button.innerText = '提交';
+                        //放置起点标示
+                        var startMarker = new AMap.Marker({
+                            position: window.position,
+                            icon: 'https://webapi.amap.com/theme/v1.3/markers/n/start.png',
+                            map: map
+                        });
+                        //根据起终点坐标规划步行路线
+                        for (var index = 0; index < route.length; index++) {
+                            var walking = new AMap.Walking();
+                            poi_longitude = parseFloat(route[index].split(',')[0]);
+                            poi_latitude = parseFloat(route[index].split(',')[1]);
+                            if (index === route.length - 1){
+                                walking.search([window.position.getLng(), window.position.getLat()], [poi_longitude, poi_latitude], function (status, result) {
+                                    // result即是对应的步行路线数据信息，相关数据结构文档请参考  https://lbs.amap.com/api/javascript-api/reference/route-search#m_WalkingResult
+                                    if (status === 'complete') {
+                                        if (result.routes && result.routes.length) {
+                                            drawRoute(result.routes[0], true);
+                                        }
+                                    } else {
+                                        log.error('步行路线数据查询失败' + result)
+                                    }
+                                });
+                            }
+                            else {
+                                walking.search([window.position.getLng(), window.position.getLat()], [poi_longitude, poi_latitude], function (status, result) {
+                                    // result即是对应的步行路线数据信息，相关数据结构文档请参考  https://lbs.amap.com/api/javascript-api/reference/route-search#m_WalkingResult
+                                    if (status === 'complete') {
+                                        if (result.routes && result.routes.length) {
+                                            drawRoute(result.routes[0], false);
+                                        }
+                                    } else {
+                                        log.error('步行路线数据查询失败' + result)
+                                    }
+                                });
+                            }
+                            window.position = new AMap.LngLat(poi_longitude, poi_latitude);
+                        }
+                        if (!JSON.parse(resp.success)){
+                            alert(msg);
+                        }
+                    }
+                    else {
+                        button.disabled = false;
+                        button.innerText = '提交';
                     }
 
+                    ///////////////////////////////////////
+                    // 功能函数
+                    function drawRoute(route, is_end) {
+                        var path = parseRouteToPath(route)
+                        if (is_end){
+                            var endMarker = new AMap.Marker({
+                                position: path[path.length - 1],
+                                icon: 'https://webapi.amap.com/theme/v1.3/markers/n/end.png',
+                                map: map
+                            });
+                        }
+                        else {
+                            var midMarker = new AMap.Marker({
+                                position: path[path.length - 1],
+                                icon: 'https://webapi.amap.com/theme/v1.3/markers/n/mid.png',
+                                map: map
+                            });
+                        }
+
+                        var routeLine = new AMap.Polyline({
+                            path: path,
+                            isOutline: true,
+                            outlineColor: '#ffeeee',
+                            borderWeight: 2,
+                            strokeWeight: 5,
+                            strokeColor: '#0091ff',
+                            lineJoin: 'round',
+                            showDir:true
+                        })
+
+                        routeLine.setMap(map)
+
+                    }
+
+                    // 解析WalkRoute对象，构造成AMap.Polyline的path参数需要的格式
+                    // WalkRoute对象的结构文档 https://lbs.amap.com/api/javascript-api/reference/route-search#m_WalkRoute
+                    function parseRouteToPath(route) {
+                        var path = []
+
+                        for (var i = 0, l = route.steps.length; i < l; i++) {
+                            var step = route.steps[i]
+
+                            for (var j = 0, n = step.path.length; j < n; j++) {
+                                path.push(step.path[j])
+                            }
+                        }
+
+                        return path
+                    }
+                    ///////////////////////////////////////
                 }
+            }
+
+            function clear_recommend() {
+                // map && map.destroy();
+                map_init(false);
+                document.getElementById('user_info').removeChild(window.canvas);
+            }
+            function show_label() {
+                map_init(true);
             }
         </script>
         <input id='poi_range' type="range" min="1" max="7" onchange="poi_num_change()"/>
@@ -147,7 +450,16 @@
     </div>
     <br>
     <div class="input-item">
-        <button class="submit-button" onclick="send_recommend()">提交</button>
+        <button id="recommend-button" class="submit-button" onclick="send_recommend()">提交</button>
+
+    </div>
+    <br>
+    <div class="input-item">
+        <button id="clear-button" class="submit-button" onclick="clear_recommend()">清空</button>
+    </div>
+    <br>
+    <div class="input-item">
+        <button id="show-button" class="submit-button" onclick="show_label()">展示地标</button>
     </div>
     <br>
 </div>
@@ -162,172 +474,17 @@
         你已经去过：<label><font size="4" color="red">{{ user_info.poi_visited_num }}&nbsp;</font></label>个景点
     </div>
     <div class="input-item">
-        <table>
+        <table id="score_table">
             <tr>
                 <th>✔️</th>
                 <th>排名</th>
                 <th>属性评分</th>
                 <th>总行程及评分</th>
             </tr>
-            <tr>
-                <td><input type="checkbox" id="route_check"></input></td>
-                <td>1</td>
-                <td>23.6/23.6/23.6/23.5/20.5</td>
-                <td>4.5km/87</td>
-            </tr>
-            <tr>
-                <td><input type="checkbox" id="route_check2"></input></td>
-                <td>2</td>
-                <td>23.6/23.6/23.6/23.5/20.5</td>
-                <td>4.8km/83</td>
-            </tr>
         </table>
     </div>
     <div id="radar_chart">
-        <script type="text/javascript">
-            var mW = 300;
-            var mH = 300;
-            var mData = [
-                ['风景优美', 77],
-                ['休闲娱乐', 72],
-                ['浪漫惬意', 46],
-                ['惊险刺激', 50],
-                ['人文和谐', 80],
-                ['景点类型', 60],
-            ];
-            var mCount = mData.length; //边数
-            var mCenter = mW / 2; //中心点
-            var mRadius = mCenter - 50; //半径(减去的值用于给绘制的文本留空间)
-            var mAngle = Math.PI * 2 / mCount; //角度
-            var mCtx = null;
-            var mColorPolygon = '#B8B8B8'; //多边形颜色
-            var mColorLines = '#B8B8B8'; //顶点连线颜色
-            var mColorText = '#000000';
 
-            //初始化
-            (function () {
-                var canvas = document.createElement('canvas');
-                document.getElementById('user_info').appendChild(canvas);
-                canvas.height = mH;
-                canvas.width = mW;
-                mCtx = canvas.getContext('2d');
-
-                drawPolygon(mCtx);
-                drawLines(mCtx);
-                drawText(mCtx);
-                drawRegion(mCtx);
-                drawCircle(mCtx);
-            })();
-
-            // 绘制多边形边
-            function drawPolygon(ctx) {
-                ctx.save();
-
-                ctx.strokeStyle = mColorPolygon;
-                var r = mRadius / mCount; //单位半径
-                //画6个圈
-                for (var i = 0; i < mCount; i++) {
-                    ctx.beginPath();
-                    var currR = r * (i + 1); //当前半径
-                    //画5条边
-                    for (var j = 0; j < mCount; j++) {
-                        var x = mCenter + currR * Math.cos(mAngle * j);
-                        var y = mCenter + currR * Math.sin(mAngle * j);
-                        ctx.lineTo(x, y);
-                    }
-                    //回到路径起始点 没有moveTo 则是lineTo的点
-                    ctx.closePath();
-                    ctx.stroke();
-                }
-
-                ctx.restore();
-            }
-
-            //顶点连线
-            function drawLines(ctx) {
-                ctx.save();
-
-                ctx.beginPath();
-                ctx.strokeStyle = mColorLines;
-
-                for (var i = 0; i < mCount; i++) {
-                    var x = mCenter + mRadius * Math.cos(mAngle * i);
-                    var y = mCenter + mRadius * Math.sin(mAngle * i);
-
-                    ctx.moveTo(mCenter, mCenter);
-                    ctx.lineTo(x, y);
-                }
-
-                ctx.stroke();
-
-                ctx.restore();
-            }
-
-            //绘制文本
-            function drawText(ctx) {
-                ctx.save();
-
-                var fontSize = mCenter / 12;
-                ctx.font = fontSize + 'px Microsoft Yahei';
-                ctx.fillStyle = mColorText;
-
-                for (var i = 0; i < mCount; i++) {
-                    var x = mCenter + mRadius * Math.cos(mAngle * i);
-                    var y = mCenter + mRadius * Math.sin(mAngle * i);
-
-
-                    // fillText的x y是文字的左下角
-                    if (mAngle * i >= 0 && mAngle * i <= Math.PI / 2) {
-                        ctx.fillText(mData[i][0], x, y + fontSize);
-                    } else if (mAngle * i > Math.PI / 2 && mAngle * i <= Math.PI) {
-                        ctx.fillText(mData[i][0], x - ctx.measureText(mData[i][0]).width, y + fontSize);
-                    } else if (mAngle * i > Math.PI && mAngle * i <= Math.PI * 3 / 2) {
-                        ctx.fillText(mData[i][0], x - ctx.measureText(mData[i][0]).width, y);
-                    } else {
-                        ctx.fillText(mData[i][0], x, y);
-                    }
-
-                }
-
-                ctx.restore();
-            }
-
-            //绘制数据区域
-            function drawRegion(ctx) {
-                ctx.save();
-
-                ctx.beginPath();
-                for (var i = 0; i < mCount; i++) {
-                    var x = mCenter + mRadius * Math.cos(mAngle * i) * mData[i][1] / 100;
-                    var y = mCenter + mRadius * Math.sin(mAngle * i) * mData[i][1] / 100;
-
-                    ctx.lineTo(x, y);
-                }
-                ctx.closePath();
-                ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
-                ctx.fill();
-
-                ctx.restore();
-            }
-
-            //画点
-            function drawCircle(ctx) {
-                ctx.save();
-
-                var r = mCenter / 40;
-                for (var i = 0; i < mCount; i++) {
-                    var x = mCenter + mRadius * Math.cos(mAngle * i) * mData[i][1] / 100;
-                    var y = mCenter + mRadius * Math.sin(mAngle * i) * mData[i][1] / 100;
-
-                    ctx.beginPath();
-                    ctx.arc(x, y, r, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
-                    ctx.fill();
-                }
-
-                ctx.restore();
-            }
-        </script>
     </div>
 
 
@@ -335,59 +492,104 @@
 
 <script type="text/javascript">
     //初始化地图对象，加载地图
+    function map_init(show_label) {
+        var map = new AMap.Map("container", {resizeEnable: true, showLabel: show_label});
+        var menu = new ContextMenu(map);
+        window.map = map;
+        window.menu = menu;
 
-    var map = new AMap.Map("container", {resizeEnable: true, showLabel: false});
+        AMap.plugin('AMap.Geolocation', function () {
+            var geolocation = new AMap.Geolocation({
+                enableHighAccuracy: true,//是否使用高精度定位，默认:true
+                timeout: 10000,          //超过10秒后停止定位，默认：5s
+                buttonPosition: 'RB',    //定位按钮的停靠位置
+                buttonOffset: new AMap.Pixel(10, 20),//定位按钮与设置的停靠位置的偏移量，默认：Pixel(10, 20)
+                zoomToAccuracy: true,   //定位成功后是否自动调整地图视野到定位点
+                showCircle: true,
+                panToLocation: true,
 
-    AMap.plugin('AMap.Geolocation', function () {
-        var geolocation = new AMap.Geolocation({
-            enableHighAccuracy: true,//是否使用高精度定位，默认:true
-            timeout: 10000,          //超过10秒后停止定位，默认：5s
-            buttonPosition: 'RB',    //定位按钮的停靠位置
-            buttonOffset: new AMap.Pixel(10, 20),//定位按钮与设置的停靠位置的偏移量，默认：Pixel(10, 20)
-            zoomToAccuracy: true,   //定位成功后是否自动调整地图视野到定位点
-            showCircle: true,
-            panToLocation: true,
-
+            });
+            map.addControl(geolocation);
+            geolocation.getCurrentPosition(function (status, result) {
+                if (status == 'complete') {
+                    window.position = result.position;
+                    console.log(result.position.toString())
+                } else {
+                    alert('定位失败');
+                }
+            });
         });
-        map.addControl(geolocation);
-        geolocation.getCurrentPosition(function (status, result) {
-            if (status == 'complete') {
-                window.position = result.position;
-                console.log(result.position.toString())
-            } else {
-                alert('定位失败');
-            }
-        });
-    });
-    var pois = JSON.parse({{ pois|tojson }});
-    var lnglats = [
-    ];
-    for ( i = 0; i < pois.length; i++) {
-        poi_lnglat = [parseFloat(pois[i]['longitude']), parseFloat(pois[i]['latitude'])];
-        lnglats.push(poi_lnglat);
-    }
+        var pois = JSON.parse({{ pois | tojson }});
+        var lnglats = [];
+        for (i = 0; i < pois.length; i++) {
+            poi_lnglat = [parseFloat(pois[i]['longitude']), parseFloat(pois[i]['latitude'])];
+            lnglats.push(poi_lnglat);
+        }
 
-    var infoWindow = new AMap.InfoWindow({offset: new AMap.Pixel(8, -32)});
-    for (i = 0, marker; i < lnglats.length; i++) {
-        var marker = new AMap.Marker({
-            position: lnglats[i],
-            icon: '../static/icon-point.png',
-            map: map
-        });
-        var info = [];
-        info.push("<img height=\"100\" width=\"100\" style=\"float:left;\" src=" + pois[i]['image'] + ">".replace("/", ""));
-        info.push("<p><a target='_blank' href=" + pois[i]['url'] + "><h3>" + pois[i]['name'] + "</h3></a></p>");
-        info.push("<p>" + pois[i]['comment'] + "</p></div>");
-        marker.content = info.join("");
-        marker.on('click', markerClick);
-    }
+        var infoWindow = new AMap.InfoWindow({offset: new AMap.Pixel(8, -32)});
+        for (i = 0, marker; i < lnglats.length; i++) {
+            var marker = new AMap.Marker({
+                position: lnglats[i],
+                icon: '../static/icon-point.png',
+                map: map
+            });
+            var info = [];
+            info.push("<img height=\"100\" width=\"100\" style=\"float:left;\" src=" + pois[i]['image'] + ">".replace("/", ""));
+            info.push("<p><a target='_blank' href=" + pois[i]['url'] + "><h3>" + pois[i]['name'] + "</h3></a></p>");
+            info.push("<p>" + pois[i]['comment'] + "</p></div>");
+            info.push("<button>喜欢</button>")
+            info.push("<button>不喜欢</button>")
+            marker.content = info.join("");
+            marker.on('click', markerClick);
+        }
 
-    function markerClick(e) {
-        infoWindow.setContent(e.target.content);
-        infoWindow.open(map, e.target.getPosition());
-    }
-    map.setFitView();
+        function markerClick(e) {
+            infoWindow.setContent(e.target.content);
+            infoWindow.open(map, e.target.getPosition());
+        }
 
+
+        //自定义菜单类
+        function ContextMenu(map) {
+            var me = this;
+
+            //地图中添加鼠标工具MouseTool插件
+            this.mouseTool = new AMap.MouseTool(map);
+
+            this.contextMenuPositon = null;
+
+            var content = [];
+
+            content.push("<div class='info context_menu'>");
+            content.push("  <p onclick='window.menu.addMarkerMenu()'>设为起点</p>");
+            content.push("</div>");
+
+            //通过content自定义右键菜单内容
+            this.contextMenu = new AMap.ContextMenu({isCustom: true, content: content.join('')});
+
+            //地图绑定鼠标右击事件——弹出右键菜单
+            map.on('rightclick', function (e) {
+                me.contextMenu.open(map, e.lnglat);
+                me.contextMenuPositon = e.lnglat; //右键菜单位置
+            });
+        }
+
+        ContextMenu.prototype.addMarkerMenu = function () {
+            //右键菜单添加Marker标记
+            console.log('右键菜单添加Marker标记');
+            this.mouseTool.close();
+            window.start_marker = new AMap.Marker({
+                map: map,
+                icon: 'https://webapi.amap.com/theme/v1.3/markers/n/start.png',
+                position: this.contextMenuPositon //基点位置
+            });
+            window.position = this.contextMenuPositon;
+            this.contextMenu.close();
+        };
+
+        map.setFitView();
+    }
+    map_init(false);
 </script>
 </body>
 </html>

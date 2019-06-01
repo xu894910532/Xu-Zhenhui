@@ -14,8 +14,8 @@ class POIInfo(Base):
     poi_name = Column(String(64))
     poi_url = Column(String(128))
     cut_type = Column(String(4))
-    poi_latitude = Column(Integer())
-    poi_longitude = Column(Integer())
+    poi_latitude = Column(Float())
+    poi_longitude = Column(Float())
     poi_location = Column(String(128))
     poi_comment = Column(String(1024))
     poi_time = Column(String(64))
@@ -35,6 +35,10 @@ class POIInfo(Base):
 class POIUser(Base):
     __tablename__ = 'poi_user'
 
+    def __init__(self, user_name, password):
+        self.user_name = user_name
+        self.password = password
+
     id = Column(Integer(), primary_key=True)
     user_name = Column(String(64))
     password = Column(String(64))
@@ -52,15 +56,18 @@ class POIUser(Base):
     type4_like = Column(Integer())
 
     def __str__(self):
-        return 'user_name:{}, password:{}'.format(self.user_name, self.password)
+        return str(self.__dict__)
 
 
 def get_db_session():
-    engine = create_engine('mysql+mysqlconnector://root:root@123.206.66.164:3306/mysql')
+    engine = create_engine('mysql+mysqlconnector://root:root@123.206.66.164:3306/xuzhenhui')
     DBSession = sessionmaker(bind=engine)
     return DBSession()
 
-# db_session = get_db_session()
-# records = db_session.query(POIInfo).all()
-# print records[2]
-# db_session.close()
+
+db_session = get_db_session()
+records = db_session.query(POIInfo).all()
+total_b, total = 0,0
+for record in records:
+    pass
+db_session.close()

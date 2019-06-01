@@ -1,22 +1,22 @@
+# coding:utf-8
 import requests
 import db
 import time
 from bs4 import BeautifulSoup
 
+poi_url_prefix = 'http://www.mafengwo.cn'
+
 user_agent = 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.81 Mobile Safari/537.36'
 content_type = 'application/x-www-form-urlencoded; charset=UTF-8'
-page_num = 12
-has_more = 1
-poi_url_prefix = 'http://www.mafengwo.cn'
+page_num, has_more = 1, 1
+
 
 headers = {
     'Accept': '*/*',
     "User-Agent": user_agent,
-    # "Content-Type": content_type,
-    # "Referer": 'http://www.mafengwo.cn/jd/10065/gonglve.html'
 }
 while has_more:
-    res = requests.get('https://m.mafengwo.cn/jd/14674/gonglve.html?page={}&is_ajax=1'.format(page_num),
+    res = requests.get('https://m.mafengwo.cn/jd/10065/gonglve.html?page={}&is_ajax=1'.format(page_num),
                        headers=headers)
     try:
         res_json = res.json()

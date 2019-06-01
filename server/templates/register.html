@@ -40,33 +40,41 @@
         });
     });
 
-    function login() {
+    function register() {
         var user_name = $("#login_name").val();
         var password = $("#login_password").val();
         if (user_name == "" || user_name == null || password == "" || password == null) {
             alert("请输入用户名和密码！");
             return false;
         }
-        var oAjax = new XMLHttpRequest();
+        var ajax = new XMLHttpRequest();
 
-        oAjax.open('POST','http://123.206.66.164:80/login',true);
-        oAjax.setRequestHeader("Content-Type","application/json");
-        //oAjax.onreadystatechange = function () {
-        // if( oAjax.readyState == 4 ) {
-        //     if( oAjax.status == 200 ) {
-        //         return
-        //     }
-        //     else {
-        //         alert( "HTTP请求错误！错误码："+oAjax.status );
-        //     }
-        // }
-        // };
+        ajax.open('POST', 'http://123.206.66.164:80/register', true);
+        ajax.setRequestHeader("Content-Type", "application/json");
+
         data = JSON.stringify({
-            "user_name":user_name,
-            "password":password
+            "user_name": user_name,
+            "password": password
         });
-        oAjax.send(data)
-    };
+        ajax.send(data);
+
+        ajax.onreadystatechange = function () {
+            if (ajax.readyState == 4 && ajax.status == 200) {
+                var resp = JSON.parse(ajax.responseText);
+                if (resp.success) {
+                    var url = 'http://123.206.66.164:80/cold_start?user_name=' + user_name;
+                    url = url + '&password=' + password;
+                    window.location.href = url;
+                }
+                else{
+                    alert(resp.msg);
+                }
+            }
+
+        }
+
+
+    }
 
 
 </script>
